@@ -11,3 +11,9 @@ toolbarMode = "minimal"
 
 [browser]
 gatherUsageStats = false
+
+# Barra lateral escura e quente, no marrom do pitch (precisa do Streamlit 1.46 ou mais novo)
+[theme.sidebar]
+backgroundColor = "#1F1612"
+secondaryBackgroundColor = "#2E211B"
+textColor = "#F3EDE3"

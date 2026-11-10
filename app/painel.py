@@ -14,6 +14,7 @@ Uso (na raiz do repositório):
     streamlit run app/painel.py
 """
 
+import base64
 import copy
 import json
 import sys
@@ -36,7 +37,21 @@ CORES = {  # do mais claro ao mais escuro, para o nível ser lido mesmo sem dist
     "vermelho": "#B23A2E",
 }
 SIMBOLO = (PASTA / "aceiro-simbolo.svg").read_text(encoding="utf-8")
+# Paisagem do entardecer seco, a mesma arte da capa do pitch
+ARTE = base64.b64encode((PASTA / "aceiro-entardecer.png").read_bytes()).decode()
 CANAL = {"radio": "Rádio comunitário e visita do técnico", "whatsapp": "WhatsApp (texto e áudio)"}
+ICONE_ALERTA = ('<svg viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" '
+                'stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>')
+ICONE_RADIO = ('<svg viewBox="0 0 24 24" fill="none" stroke="#1E2A4A" stroke-width="2" stroke-linecap="round" '
+               'stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="m7 8 9-5"/>'
+               '<circle cx="15.5" cy="14" r="2.5"/><path d="M6.5 12.5h3M6.5 15.5h3"/></svg>')
+ICONE_PLAY = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#FFFFFF"/></svg>'
+ONDA = ('<svg class="ac-onda" viewBox="0 0 120 26" preserveAspectRatio="none" aria-hidden="true">'
+        + "".join(f'<rect x="{i * 4}" y="{13 - h}" width="2" height="{2 * h}" rx="1" fill="#2F8F4E"/>'
+                  for i, h in enumerate([3, 6, 9, 5, 11, 8, 4, 10, 12, 7, 5, 9, 6, 11, 8, 4, 7, 10, 5, 3,
+                                         6, 9, 12, 8, 5, 10, 7, 4, 6, 3]))
+        + '</svg>')
+SEMANAS_INCOMPLETAS = ("2026-W31", "2026-W44")
 SIGNIFICADO = {
     "verde": "Sem alerta no município nesta semana.",
     "amarelo": "Atenção: há algum foco de calor no município ou o período é de risco.",
@@ -46,15 +61,25 @@ SIGNIFICADO = {
 
 ESTILO = """
 <style>
-#MainMenu, header [data-testid="stToolbar"], [data-testid="stDecoration"] {display: none;}
+/* Esconde só o menu e o botão de deploy. O botão de reabrir a barra lateral fica no mesmo cabeçalho e precisa continuar visível. */
+#MainMenu, [data-testid="stMainMenu"], [data-testid="stAppDeployButton"], [data-testid="stToolbarActions"], [data-testid="stDecoration"] {display: none;}
+/* Tira o ícone de link que o Streamlit põe ao lado de cada título */
+[data-testid="stHeaderActionElements"] {display: none;}
 .block-container {padding-top: 3.4rem; padding-bottom: 2rem; max-width: 1400px;}
 .ac-topo {display: flex; align-items: center; gap: 14px; margin-bottom: .2rem;}
 .ac-topo svg {width: 52px; height: 52px; flex: none;}
 .ac-topo .ac-h1 {font-size: 1.9rem; line-height: 1.1; margin: 0; padding: 0; font-weight: 700; color: #1E2A4A;}
 .ac-topo p {margin: 2px 0 0; color: #5B6478; font-size: .95rem;}
-.ac-aviso {border-left: 5px solid #E8590C; background: #FDF0E6; padding: 12px 16px; border-radius: 6px;
-           margin: .9rem 0 1.1rem; color: #4A2A12; font-size: .95rem;}
-.ac-aviso b {color: #B4460A;}
+.ac-aviso {display: flex; gap: 12px; align-items: flex-start; background: #FDF0E6; border: 1px solid #F3C9A8;
+           padding: 12px 16px; border-radius: 12px; margin: .9rem 0 1.1rem; color: #4A2A12; font-size: .95rem;}
+.ac-aviso svg {flex: none; width: 22px; height: 22px; margin-top: 1px;}
+.ac-aviso b {color: #9A3B08;}
+
+/* Superfícies do navegador */
+::selection {background: #CDE6D4; color: #1E2A4A;}
+:focus-visible {outline: 2px solid #2F8F4E; outline-offset: 2px;}
+* {scrollbar-color: #CFC3AE transparent;}
+[data-testid="stMetricValue"], .ac-numero {font-variant-numeric: tabular-nums;}
 [data-testid="stMetric"] {background: #FFFFFF; border: 1px solid #E6DED0; border-radius: 10px; padding: 14px 18px;}
 [data-testid="stMetricLabel"] p {font-size: .85rem; color: #5B6478;}
 [data-testid="stMetricValue"] {font-size: 2rem; font-weight: 700;}
@@ -64,6 +89,25 @@ ESTILO = """
 section[data-testid="stSidebar"] .ac-marca {display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.25rem;}
 section[data-testid="stSidebar"] .ac-marca svg {width: 34px; height: 34px;}
 
+/* Início: capa com a arte do pitch */
+.ac-capa {position: relative; border-radius: 16px; overflow: hidden; margin: .2rem 0 0; padding: 40px 40px 0;
+          background: linear-gradient(180deg, #1C1411 0%, #3A1D13 45%, #9C4119 75%, #D9772E 100%);}
+.ac-capa-arte {display: block; width: calc(100% + 80px) !important; max-width: none !important; margin: 8px -40px 0; height: auto;}
+.ac-capa .ac-hero {margin: 0;}
+.ac-capa .ac-hero svg {width: 76px; height: 76px; background: #FBF9F5; border-radius: 50%; padding: 8px; box-sizing: border-box;}
+.ac-capa .ac-hero h1 {color: #FFFFFF;}
+.ac-capa .ac-hero p {color: #F3DCC6; max-width: 46ch;}
+.ac-capa-cartoes {display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
+                  margin: -26px 20px 0; position: relative;}
+.ac-capa-cartoes .ac-cartao {background: rgba(251, 249, 245, .82); border: 1px solid rgba(255, 255, 255, .55);
+                  -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2);
+                  box-shadow: 0 10px 30px -12px rgba(28, 20, 17, .45);}
+.ac-cartao, [data-testid="stMetric"] {transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s cubic-bezier(.2, .8, .2, 1);}
+.ac-cartao:hover, [data-testid="stMetric"]:hover {transform: translateY(-4px); box-shadow: 0 14px 28px -14px rgba(28, 20, 17, .35);}
+@media (prefers-reduced-motion: reduce) {.ac-cartao, [data-testid="stMetric"] {transition: none;} .ac-cartao:hover, [data-testid="stMetric"]:hover {transform: none;}}
+@media (max-width: 640px) {.ac-capa {padding: 28px 20px 0;} .ac-capa-arte {width: calc(100% + 40px) !important; margin: 8px -20px 0;} .ac-capa .ac-hero {flex-direction: column; align-items: flex-start; gap: 14px;}
+                           .ac-capa .ac-hero h1 {font-size: 2.2rem;} .ac-capa-cartoes {margin: -12px 10px 0;}}
+
 /* Início */
 .ac-hero {display: flex; align-items: center; gap: 22px; margin: .4rem 0 1.2rem;}
 .ac-hero svg {width: 84px; height: 84px; flex: none;}
@@ -71,10 +115,14 @@ section[data-testid="stSidebar"] .ac-marca svg {width: 34px; height: 34px;}
 .ac-hero p {font-size: 1.15rem; color: #4A5568; margin: 4px 0 0;}
 .ac-cartoes {display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: .6rem 0 1rem;}
 .ac-cartao {background: #FFFFFF; border: 1px solid #E6DED0; border-radius: 12px; padding: 16px 18px;}
-.ac-cartao .ac-rot {font-size: .78rem; font-weight: 700; letter-spacing: .06em; color: #2F8F4E; text-transform: uppercase;}
 .ac-cartao h4 {margin: 4px 0 6px; padding: 0; color: #1E2A4A; font-size: 1.08rem;}
 .ac-cartao p {margin: 0; color: #4A5568; font-size: .95rem; line-height: 1.45;}
+.ac-numeros {display: flex; flex-wrap: wrap; margin: 1.4rem 0 2rem; border-top: 1px solid #E6DED0; border-bottom: 1px solid #E6DED0;}
+.ac-numeros > div {flex: 1 1 220px; padding: 16px 20px 16px 0;}
+.ac-numeros > div + div {padding-left: 20px; border-left: 1px solid #E6DED0;}
 .ac-numero {font-size: 2rem; font-weight: 800; color: #1E2A4A; line-height: 1.1;}
+.ac-numeros p {margin: 4px 0 0; color: #4A5568; font-size: .92rem; line-height: 1.4; max-width: 34ch;}
+@media (max-width: 640px) {.ac-numeros > div + div {padding-left: 0; border-left: 0; border-top: 1px solid #E6DED0;}}
 .ac-rodape {margin-top: 2rem; padding-top: .8rem; border-top: 1px solid #E6DED0; color: #5B6478; font-size: .85rem;}
 
 /* Visão do agricultor: celular */
@@ -88,15 +136,19 @@ section[data-testid="stSidebar"] .ac-marca svg {width: 34px; height: 34px;}
            color: #1E2A4A; font-size: .95rem; line-height: 1.45; box-shadow: 0 1px 1px rgba(0,0,0,.08);}
 .ac-balao .ac-hora {display: block; text-align: right; color: #8A94A6; font-size: .72rem; margin-top: 4px;}
 .ac-audio {display: flex; align-items: center; gap: 10px;}
-.ac-audio .ac-play {width: 30px; height: 30px; border-radius: 50%; background: #2F8F4E; color: #FFF;
-                    display: flex; align-items: center; justify-content: center; font-size: .8rem;}
-.ac-audio .ac-onda {flex: 1; height: 4px; background: repeating-linear-gradient(90deg, #2F8F4E 0 3px, transparent 3px 6px); border-radius: 2px;}
-.ac-sms {font-family: ui-monospace, Menlo, monospace; font-size: .9rem; background: #FFFFFF; border-radius: 12px;
-         padding: 12px 14px; border: 1px solid #E6DED0; color: #1E2A4A;}
+.ac-audio .ac-play {width: 32px; height: 32px; border-radius: 50%; background: #2F8F4E; flex: none;
+                    display: flex; align-items: center; justify-content: center;}
+.ac-audio .ac-onda {flex: 1; height: 26px;}
+.ac-audio small {color: #5B6478;}
+.ac-sms {font-size: .95rem; line-height: 1.45; background: #FFFFFF; border-radius: 12px 12px 12px 4px;
+         padding: 10px 12px; color: #1E2A4A; box-shadow: 0 1px 1px rgba(0,0,0,.08);}
+.ac-sms-rot {font-size: .75rem; color: #5B6478; text-align: center; margin: 2px 0 8px;}
+.ac-radio-rot {display: flex; align-items: center; gap: 6px; font-weight: 700; margin-bottom: 4px;}
+.ac-radio-rot svg {width: 18px; height: 18px;}
 </style>
 """
 
-st.set_page_config(page_title="Aceiro · Boletim de fogo e seca", page_icon="🔥", layout="wide")
+st.set_page_config(page_title="Aceiro · Boletim de fogo e seca", page_icon=":material/local_fire_department:", layout="wide")
 st.markdown(ESTILO, unsafe_allow_html=True)
 
 
@@ -155,52 +207,36 @@ if bol is None:
 if "decisoes" not in st.session_state:
     st.session_state.decisoes = []
 
-# ---------------------------------------------------------------- barra lateral e semana
+# ---------------------------------------------------------------- barra lateral (vale para todas as páginas)
 semanas = sorted(bol["semana_ref"].unique())
+st.sidebar.markdown(f"<div class='ac-marca'>{SIMBOLO}<span>Aceiro</span></div>", unsafe_allow_html=True)
+st.sidebar.caption("Boletim de fogo e seca · protótipo")
+semana = st.sidebar.selectbox("Semana do boletim", semanas, index=len(semanas) - 1,
+                              format_func=lambda s: f"{s} (a partir de {bol.loc[bol.semana_ref == s, 'inicio_semana'].iloc[0]:%d/%m})")
+st.sidebar.caption(
+    "Dados reais: focos do INPE (satélite de referência), IBGE, Anatel e NOAA, de ago. a out./2026. "
+    "O nível usa uma regra de demonstração, não o score do modelo."
+)
+if semana in SEMANAS_INCOMPLETAS:
+    st.sidebar.warning("Semana incompleta: os dados vão de 01/08 a 31/10.")
 
+atual = bol[bol["semana_ref"] == semana].copy()
+pos = semanas.index(semana)
+anterior = bol[bol["semana_ref"] == semanas[pos - 1]] if pos > 0 else None
+aviso = atual["fl_aviso_periodo"].iloc[0] == "S"
+inicio = atual["inicio_semana"].iloc[0]
 
-def montar_semana(usa_semana):
-    """Monta a barra lateral e os dados da semana escolhida.
+# Decisões do técnico nesta sessão (simulação: nada é enviado)
+for d in st.session_state.decisoes:
+    if d["semana"] == semana:
+        atual.loc[atual["cod_municipio"] == d["cod_municipio"], "nivel_final"] = d["nivel_final"]
+atual["nivel_final"] = atual.get("nivel_final", pd.Series(index=atual.index, dtype=object)).fillna(atual["nivel_alerta"])
+# Ação e textos de todos os canais saem do nível final, depois da decisão do técnico
+atual["acao_final"] = atual["nivel_final"].map(acao)
+atual["sms_final"] = [texto_sms(n, q) for n, q in zip(atual["nivel_final"], atual["qtd_focos"])]
+atual["ajustado"] = atual["nivel_final"] != atual["nivel_alerta"]
+nomes_por_focos = atual.sort_values("qtd_focos", ascending=False)["nm_municipio"].tolist()
 
-    O seletor de semana só aparece nas páginas que mudam com ele (agricultor e técnico).
-    A escolha fica guardada na sessão, para não se perder ao trocar de página.
-    """
-    global semana, atual, anterior, aviso, inicio, nomes_por_focos
-    st.sidebar.markdown(f"<div class='ac-marca'>{SIMBOLO}<span>Aceiro</span></div>", unsafe_allow_html=True)
-    st.sidebar.caption("Boletim de fogo e seca · protótipo")
-    escolhida = st.session_state.get("semana_escolhida", semanas[-1])
-    if usa_semana:
-        semana = st.sidebar.selectbox(
-            "Semana do boletim", semanas, index=semanas.index(escolhida),
-            format_func=lambda s: f"{s} (a partir de {bol.loc[bol.semana_ref == s, 'inicio_semana'].iloc[0]:%d/%m})")
-        st.session_state.semana_escolhida = semana
-        if semana in ("2026-W31", "2026-W44"):
-            st.sidebar.warning("Semana incompleta: os dados vão de 01/08 a 31/10.")
-    else:
-        semana = escolhida
-        st.sidebar.caption("Os números desta página somam todo o período, de ago. a out./2026. "
-                           "Para ver uma semana, abra a visão do agricultor ou o painel do técnico.")
-    st.sidebar.caption(
-        "Dados reais: focos do INPE (satélite de referência), IBGE, Anatel e NOAA, de ago. a out./2026. "
-        "O nível usa uma regra de demonstração, não o score do modelo."
-    )
-
-    atual = bol[bol["semana_ref"] == semana].copy()
-    pos = semanas.index(semana)
-    anterior = bol[bol["semana_ref"] == semanas[pos - 1]] if pos > 0 else None
-    aviso = atual["fl_aviso_periodo"].iloc[0] == "S"
-    inicio = atual["inicio_semana"].iloc[0]
-
-    # Decisões do técnico nesta sessão (simulação: nada é enviado)
-    for d in st.session_state.decisoes:
-        if d["semana"] == semana:
-            atual.loc[atual["cod_municipio"] == d["cod_municipio"], "nivel_final"] = d["nivel_final"]
-    atual["nivel_final"] = atual.get("nivel_final", pd.Series(index=atual.index, dtype=object)).fillna(atual["nivel_alerta"])
-    # Ação e textos de todos os canais saem do nível final, depois da decisão do técnico
-    atual["acao_final"] = atual["nivel_final"].map(acao)
-    atual["sms_final"] = [texto_sms(n, q) for n, q in zip(atual["nivel_final"], atual["qtd_focos"])]
-    atual["ajustado"] = atual["nivel_final"] != atual["nivel_alerta"]
-    nomes_por_focos = atual.sort_values("qtd_focos", ascending=False)["nm_municipio"].tolist()
 
 def rodape():
     st.markdown(
@@ -215,46 +251,47 @@ def pagina_inicio():
     familiar = int(bol.drop_duplicates("cod_municipio")["qtd_estab_agro_familiar"].sum())
     fmt = lambda n: f"{n:,}".replace(",", ".")  # noqa: E731
     st.markdown(
-        f"<div class='ac-hero'>{SIMBOLO}<div><h1>Aceiro</h1>"
-        "<p>Boletim semanal de fogo e seca, em linguagem simples, para a agricultura familiar do Pará.</p></div></div>",
+        f"<div class='ac-capa'><div class='ac-hero'>{SIMBOLO}<div><h1>Aceiro</h1>"
+        "<p>Boletim semanal de fogo e seca, em linguagem simples, para a agricultura familiar do Pará.</p></div></div>"
+        f"<img class='ac-capa-arte' alt='' src='data:image/png;base64,{ARTE}'></div>",
         unsafe_allow_html=True)
 
     st.markdown(f"""
-<div class='ac-cartoes'>
-  <div class='ac-cartao'><div class='ac-rot'>O problema</div><h4>O dado existe, a decisão não chega</h4>
+<div class='ac-capa-cartoes'>
+  <div class='ac-cartao'><h4>O dado existe, a decisão não chega</h4>
     <p>Focos de fogo, seca e El Niño são públicos, mas chegam em mapas e índices técnicos.
     Quem vive da roça precisa saber o que fazer nesta semana.</p></div>
-  <div class='ac-cartao'><div class='ac-rot'>A solução</div><h4>Um boletim por município, toda semana</h4>
+  <div class='ac-cartao'><h4>Um boletim por município, toda semana</h4>
     <p>Nível de alerta, o motivo em uma frase e a ação da semana, como abrir o aceiro.
     Chega por WhatsApp, SMS, rádio comunitário ou visita do técnico da Emater.</p></div>
-  <div class='ac-cartao'><div class='ac-rot'>Quem decide</div><h4>O técnico revisa antes de sair</h4>
+  <div class='ac-cartao'><h4>O técnico revisa antes de sair</h4>
     <p>Alerta vermelho só sai depois da revisão do técnico. Para baixar o nível, ele precisa
     registrar o motivo.</p></div>
 </div>
-<div class='ac-cartoes'>
-  <div class='ac-cartao'><div class='ac-numero'>{fmt(total_focos)}</div>
+<div class='ac-numeros'>
+  <div><div class='ac-numero'>{fmt(total_focos)}</div>
     <p>focos de calor no Pará de ago. a out./2026 (INPE, satélite de referência)</p></div>
-  <div class='ac-cartao'><div class='ac-numero'>144</div>
+  <div><div class='ac-numero'>144</div>
     <p>municípios com boletim toda semana</p></div>
-  <div class='ac-cartao'><div class='ac-numero'>{fmt(familiar)}</div>
+  <div><div class='ac-numero'>{fmt(familiar)}</div>
     <p>estabelecimentos da agricultura familiar no estado (IBGE, Censo Agro 2017)</p></div>
 </div>
 """, unsafe_allow_html=True)
 
-    st.subheader("Como usar este protótipo")
+    st.subheader("Como usar este protótipo", anchor=False)
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("**1. Veja o que o agricultor recebe**")
         st.caption("Escolha um município e veja o boletim no WhatsApp, no SMS e no rádio.")
-        st.page_link(PAGINAS["agricultor"], label="Abrir a visão do agricultor", icon="📱")
+        st.page_link(PAGINAS["agricultor"], label="Abrir a visão do agricultor", icon=":material/smartphone:")
     with c2:
         st.markdown("**2. Faça o papel do técnico**")
         st.caption("Veja o mapa da semana e revise os alertas vermelhos na fila.")
-        st.page_link(PAGINAS["tecnico"], label="Abrir o painel do técnico", icon="🗺️")
+        st.page_link(PAGINAS["tecnico"], label="Abrir o painel do técnico", icon=":material/map:")
     with c3:
         st.markdown("**3. Entenda os dados**")
         st.caption("Fontes, a regra usada para o nível e o que o Aceiro não promete.")
-        st.page_link(PAGINAS["dados"], label="Abrir sobre os dados", icon="ℹ️")
+        st.page_link(PAGINAS["dados"], label="Abrir sobre os dados", icon=":material/info:")
 
     st.info("**O que é real e o que é demonstração.** Os focos, os municípios, a cobertura 4G e o El Niño são "
             "dados públicos reais. O nível de alerta usa uma regra simples de demonstração, e a revisão do "
@@ -282,16 +319,16 @@ def pagina_agricultor():
             baloes.append(f"{selo(linha.nivel_final)}<br>{motivo(linha)}")
             baloes.append(f"<b>O que fazer:</b> {linha.acao_final}")
             corpo = "".join(f"<div class='ac-balao'>{b}<span class='ac-hora'>seg 06:00</span></div>" for b in baloes)
-            corpo += ("<div class='ac-balao'><div class='ac-audio'><div class='ac-play'>▶</div>"
-                      "<div class='ac-onda'></div><small>0:24</small></div>"
+            corpo += (f"<div class='ac-balao'><div class='ac-audio'><div class='ac-play'>{ICONE_PLAY}</div>"
+                      f"{ONDA}<small>0:24</small></div>"
                       "<span class='ac-hora'>Boletim em áudio · seg 06:00</span></div>")
             corpo += "<div class='ac-balao' style='font-size:.82rem;color:#5B6478'>Aviso automático, pode errar. Para sair: SAIR.</div>"
         elif canal == "SMS":
-            corpo = (f"<div class='ac-sms'>{linha.sms_final}</div>"
+            corpo = (f"<div class='ac-sms-rot'>SMS · seg 06:00</div><div class='ac-sms'>{linha.sms_final}</div>"
                      f"<p style='color:#5B6478;font-size:.8rem;margin-top:6px'>{len(linha.sms_final)} de 160 caracteres, "
                      "sem acento, para caber em uma mensagem.</p>")
         else:
-            corpo = (f"<div class='ac-balao'>🎙️ <b>Rádio comunitário</b><br>{texto_radio(linha)}</div>"
+            corpo = (f"<div class='ac-balao'><div class='ac-radio-rot'>{ICONE_RADIO}Rádio comunitário</div>{texto_radio(linha)}</div>"
                      "<p style='color:#5B6478;font-size:.8rem'>Texto lido pelo locutor ou levado pelo técnico na visita.</p>")
         st.markdown(
             f"<div class='ac-celular'><div class='ac-cel-topo'>{SIMBOLO}<div>Aceiro<small>Boletim de "
@@ -317,8 +354,8 @@ def pagina_tecnico():
         f"<p>Boletim da semana {semana}, de {inicio:%d/%m} a {(inicio + pd.to_timedelta(6, unit="D")):%d/%m} · 144 municípios do Pará</p></div></div>",
         unsafe_allow_html=True)
     if aviso:
-        st.markdown("<div class='ac-aviso'><b>Aviso de período ativo.</b> El Niño forte e foco em mais da metade "
-                    "dos municípios. Todos recebem a orientação de preparar o aceiro e evitar queimar.</div>",
+        st.markdown(f"<div class='ac-aviso'>{ICONE_ALERTA}<div><b>Aviso de período ativo.</b> El Niño forte e foco em mais da metade "
+                    "dos municípios. Todos recebem a orientação de preparar o aceiro e evitar queimar.</div></div>",
                     unsafe_allow_html=True)
 
     filtro = st.multiselect("Níveis no mapa e na tabela", NIVEIS, default=NIVEIS)
@@ -326,13 +363,16 @@ def pagina_tecnico():
     revisados = {d["cod_municipio"] for d in st.session_state.decisoes if d["semana"] == semana}
     fila = atual[(atual["nivel_alerta"] == "vermelho") & (~atual["cod_municipio"].isin(revisados))]
     focos = int(atual["qtd_focos"].sum())
-    delta = focos - int(anterior["qtd_focos"].sum()) if anterior is not None else None
+    # Semana incompleta não tem comparação justa com a anterior
+    delta = (focos - int(anterior["qtd_focos"].sum())
+             if anterior is not None and semana not in SEMANAS_INCOMPLETAS else None)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Em alerta", f"{alerta} de {len(atual)}", help="Municípios em laranja ou vermelho")
     c2.metric("Vermelhos na fila", f"{len(fila)}", help="Boletins vermelhos esperando a revisão do técnico")
     c3.metric("Focos na semana", f"{focos:,}".replace(",", "."),
-              delta=None if delta is None else f"{delta:+,}".replace(",", "."), delta_color="inverse")
+              delta=None if delta is None else f"{delta:+,}".replace(",", "."), delta_color="inverse",
+              help="Comparação com a semana anterior. Não aparece em semana incompleta.")
     c4.metric("Com foco", f"{atual['pct_mun_com_foco'].iloc[0]:.0f}%", help="Municípios com pelo menos um foco na semana")
 
     aba_mapa, aba_fila, aba_boletim, aba_tendencia = st.tabs(
@@ -361,7 +401,7 @@ def pagina_tecnico():
             "GeoJsonLayer", geo, pickable=True, stroked=True, filled=True,
             get_fill_color="properties.cor", get_line_color=[251, 249, 245, 200], line_width_min_pixels=0.6,
         )
-        col_mapa, col_tabela = st.columns([5, 4])
+        col_mapa, col_tabela = st.columns([4, 5])
         with col_mapa:
             st.pydeck_chart(pdk.Deck(
                 layers=[camada],
@@ -383,7 +423,12 @@ def pagina_tecnico():
         with col_tabela:
             st.dataframe(estilo, hide_index=True, use_container_width=True, height=560,
                          column_config={"Município": st.column_config.TextColumn(width="medium"),
-                                        "Dias sem chuva": st.column_config.Column("Dias s/ chuva")})
+                                        "Nível": st.column_config.TextColumn(width="small"),
+                                        "Focos": st.column_config.Column(width="small"),
+                                        "Dias sem chuva": st.column_config.Column("Sem chuva", width="small", help="Dias sem chuva (mediana dos focos)"),
+                                        "Canal": st.column_config.TextColumn(width="small"),
+                                        "4G (% área)": st.column_config.Column(
+                                            "4G %", width="small", help="% da área do município com sinal 4G")})
 
     with aba_fila:
         st.caption("Vermelho só sai depois da revisão. Para baixar o nível, o motivo é obrigatório. "
@@ -412,7 +457,7 @@ def pagina_tecnico():
                             })
                             st.rerun()
         if st.session_state.decisoes:
-            st.subheader("Decisões registradas nesta sessão")
+            st.subheader("Decisões registradas nesta sessão", anchor=False)
             st.dataframe(pd.DataFrame(st.session_state.decisoes), hide_index=True, use_container_width=True)
 
     with aba_boletim:
@@ -481,11 +526,9 @@ def pagina_dados():
 
 
 PAGINAS = {
-    "inicio": st.Page(pagina_inicio, title="Início", icon="🏠", default=True, url_path="inicio"),
-    "agricultor": st.Page(pagina_agricultor, title="Visão do agricultor", icon="📱", url_path="agricultor"),
-    "tecnico": st.Page(pagina_tecnico, title="Painel do técnico", icon="🗺️", url_path="tecnico"),
-    "dados": st.Page(pagina_dados, title="Sobre os dados", icon="ℹ️", url_path="dados"),
+    "inicio": st.Page(pagina_inicio, title="Início", icon=":material/home:", default=True, url_path="inicio"),
+    "agricultor": st.Page(pagina_agricultor, title="Visão do agricultor", icon=":material/smartphone:", url_path="agricultor"),
+    "tecnico": st.Page(pagina_tecnico, title="Painel do técnico", icon=":material/map:", url_path="tecnico"),
+    "dados": st.Page(pagina_dados, title="Sobre os dados", icon=":material/info:", url_path="dados"),
 }
-pagina = st.navigation(list(PAGINAS.values()))
-montar_semana(pagina.url_path in ("agricultor", "tecnico"))
-pagina.run()
+st.navigation(list(PAGINAS.values())).run()
