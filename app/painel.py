@@ -155,36 +155,52 @@ if bol is None:
 if "decisoes" not in st.session_state:
     st.session_state.decisoes = []
 
-# ---------------------------------------------------------------- barra lateral (vale para todas as páginas)
+# ---------------------------------------------------------------- barra lateral e semana
 semanas = sorted(bol["semana_ref"].unique())
-st.sidebar.markdown(f"<div class='ac-marca'>{SIMBOLO}<span>Aceiro</span></div>", unsafe_allow_html=True)
-st.sidebar.caption("Boletim de fogo e seca · protótipo")
-semana = st.sidebar.selectbox("Semana do boletim", semanas, index=len(semanas) - 1,
-                              format_func=lambda s: f"{s} (a partir de {bol.loc[bol.semana_ref == s, 'inicio_semana'].iloc[0]:%d/%m})")
-st.sidebar.caption(
-    "Dados reais: focos do INPE (satélite de referência), IBGE, Anatel e NOAA, de ago. a out./2026. "
-    "O nível usa uma regra de demonstração, não o score do modelo."
-)
-if semana in ("2026-W31", "2026-W44"):
-    st.sidebar.warning("Semana incompleta: os dados vão de 01/08 a 31/10.")
 
-atual = bol[bol["semana_ref"] == semana].copy()
-pos = semanas.index(semana)
-anterior = bol[bol["semana_ref"] == semanas[pos - 1]] if pos > 0 else None
-aviso = atual["fl_aviso_periodo"].iloc[0] == "S"
-inicio = atual["inicio_semana"].iloc[0]
 
-# Decisões do técnico nesta sessão (simulação: nada é enviado)
-for d in st.session_state.decisoes:
-    if d["semana"] == semana:
-        atual.loc[atual["cod_municipio"] == d["cod_municipio"], "nivel_final"] = d["nivel_final"]
-atual["nivel_final"] = atual.get("nivel_final", pd.Series(index=atual.index, dtype=object)).fillna(atual["nivel_alerta"])
-# Ação e textos de todos os canais saem do nível final, depois da decisão do técnico
-atual["acao_final"] = atual["nivel_final"].map(acao)
-atual["sms_final"] = [texto_sms(n, q) for n, q in zip(atual["nivel_final"], atual["qtd_focos"])]
-atual["ajustado"] = atual["nivel_final"] != atual["nivel_alerta"]
-nomes_por_focos = atual.sort_values("qtd_focos", ascending=False)["nm_municipio"].tolist()
+def montar_semana(usa_semana):
+    """Monta a barra lateral e os dados da semana escolhida.
 
+    O seletor de semana só aparece nas páginas que mudam com ele (agricultor e técnico).
+    A escolha fica guardada na sessão, para não se perder ao trocar de página.
+    """
+    global semana, atual, anterior, aviso, inicio, nomes_por_focos
+    st.sidebar.markdown(f"<div class='ac-marca'>{SIMBOLO}<span>Aceiro</span></div>", unsafe_allow_html=True)
+    st.sidebar.caption("Boletim de fogo e seca · protótipo")
+    escolhida = st.session_state.get("semana_escolhida", semanas[-1])
+    if usa_semana:
+        semana = st.sidebar.selectbox(
+            "Semana do boletim", semanas, index=semanas.index(escolhida),
+            format_func=lambda s: f"{s} (a partir de {bol.loc[bol.semana_ref == s, 'inicio_semana'].iloc[0]:%d/%m})")
+        st.session_state.semana_escolhida = semana
+        if semana in ("2026-W31", "2026-W44"):
+            st.sidebar.warning("Semana incompleta: os dados vão de 01/08 a 31/10.")
+    else:
+        semana = escolhida
+        st.sidebar.caption("Os números desta página somam todo o período, de ago. a out./2026. "
+                           "Para ver uma semana, abra a visão do agricultor ou o painel do técnico.")
+    st.sidebar.caption(
+        "Dados reais: focos do INPE (satélite de referência), IBGE, Anatel e NOAA, de ago. a out./2026. "
+        "O nível usa uma regra de demonstração, não o score do modelo."
+    )
+
+    atual = bol[bol["semana_ref"] == semana].copy()
+    pos = semanas.index(semana)
+    anterior = bol[bol["semana_ref"] == semanas[pos - 1]] if pos > 0 else None
+    aviso = atual["fl_aviso_periodo"].iloc[0] == "S"
+    inicio = atual["inicio_semana"].iloc[0]
+
+    # Decisões do técnico nesta sessão (simulação: nada é enviado)
+    for d in st.session_state.decisoes:
+        if d["semana"] == semana:
+            atual.loc[atual["cod_municipio"] == d["cod_municipio"], "nivel_final"] = d["nivel_final"]
+    atual["nivel_final"] = atual.get("nivel_final", pd.Series(index=atual.index, dtype=object)).fillna(atual["nivel_alerta"])
+    # Ação e textos de todos os canais saem do nível final, depois da decisão do técnico
+    atual["acao_final"] = atual["nivel_final"].map(acao)
+    atual["sms_final"] = [texto_sms(n, q) for n, q in zip(atual["nivel_final"], atual["qtd_focos"])]
+    atual["ajustado"] = atual["nivel_final"] != atual["nivel_alerta"]
+    nomes_por_focos = atual.sort_values("qtd_focos", ascending=False)["nm_municipio"].tolist()
 
 def rodape():
     st.markdown(
@@ -470,4 +486,6 @@ PAGINAS = {
     "tecnico": st.Page(pagina_tecnico, title="Painel do técnico", icon="🗺️", url_path="tecnico"),
     "dados": st.Page(pagina_dados, title="Sobre os dados", icon="ℹ️", url_path="dados"),
 }
-st.navigation(list(PAGINAS.values())).run()
+pagina = st.navigation(list(PAGINAS.values()))
+montar_semana(pagina.url_path in ("agricultor", "tecnico"))
+pagina.run()
