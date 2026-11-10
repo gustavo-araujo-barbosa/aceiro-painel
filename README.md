@@ -2,6 +2,10 @@
 
 Protótipo funcional do **Aceiro**, projeto do grupo **Raiz de Dados** para a Global Solution 2026/2 da FIAP (tema CitizenTech).
 
+**Abra o painel:** https://aceiro-para.streamlit.app
+
+Se aparecer a tela "This app has gone to sleep", clique em **"Yes, get this app back up!"** e espere uns 30 segundos. O Streamlit Community Cloud desliga apps gratuitos depois de um tempo sem visitas.
+
 O Aceiro transforma dados públicos de fogo, seca e El Niño num boletim semanal por município, em linguagem simples. O boletim traz o nível de alerta, o motivo em uma frase e a ação da semana, como abrir o aceiro. Ele chega por WhatsApp, SMS, rádio comunitário ou visita do técnico da Emater.
 
 ## O que dá para fazer no painel
