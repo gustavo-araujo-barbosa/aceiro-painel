@@ -502,7 +502,7 @@ def pagina_tecnico():
                 # Fundo claro da Carto, sem rótulos e sem chave de API: mostra os estados vizinhos e o litoral
                 map_provider="carto",
                 map_style="https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json",
-            ), use_container_width=True, height=470)
+            ), width="stretch", height=470)
             legenda = "".join(f"<div><span class='ac-pt' style='background:{CORES[n]}'></span>{n.capitalize()} "
                               f"<b>{int((atual['nivel_final'] == n).sum())}</b></div>" for n in NIVEIS)
             st.markdown(f"<div class='ac-legenda'>{legenda}</div>", unsafe_allow_html=True)
@@ -517,7 +517,7 @@ def pagina_tecnico():
             tabela[col] = tabela[col].map(lambda v: "–" if pd.isna(v) else f"{v:.0f}")
         estilo = tabela.style.map(lambda n: f"color:{CORES[n]};font-weight:700", subset=["Nível"])
         with col_tabela:
-            st.dataframe(estilo, hide_index=True, use_container_width=True, height=560,
+            st.dataframe(estilo, hide_index=True, width="stretch", height=560,
                          column_config={"Município": st.column_config.TextColumn(width=150, pinned=False),
                                         "Nível": st.column_config.TextColumn(width=72),
                                         "Focos": st.column_config.Column(width=56),
@@ -554,7 +554,7 @@ def pagina_tecnico():
                             st.rerun()
         if st.session_state.decisoes:
             st.subheader("Decisões registradas nesta sessão", anchor=False)
-            st.dataframe(pd.DataFrame(st.session_state.decisoes), hide_index=True, use_container_width=True)
+            st.dataframe(pd.DataFrame(st.session_state.decisoes), hide_index=True, width="stretch")
 
     with aba_boletim:
         escolhido = st.selectbox("Município", nomes_por_focos)
