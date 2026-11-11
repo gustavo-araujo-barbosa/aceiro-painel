@@ -65,6 +65,10 @@ ESTILO = """
 #MainMenu, [data-testid="stMainMenu"], [data-testid="stAppDeployButton"], [data-testid="stToolbarActions"], [data-testid="stDecoration"] {display: none;}
 /* Tira o ícone de link que o Streamlit põe ao lado de cada título */
 [data-testid="stHeaderActionElements"] {display: none;}
+/* No Cloud o cabeçalho tem fundo sólido e fica parado no topo, cobrindo o texto ao rolar.
+   Transparente e sem capturar cliques; só o botão de abrir a barra lateral continua clicável. */
+header[data-testid="stHeader"] {background: transparent !important; pointer-events: none;}
+header[data-testid="stHeader"] * {pointer-events: auto;}
 .block-container {padding-top: 2.2rem; padding-bottom: 2rem; max-width: 1400px;}
 .ac-topo {display: flex; align-items: center; gap: 14px; margin-bottom: .2rem;}
 .ac-topo svg {width: 52px; height: 52px; flex: none;}
@@ -467,28 +471,38 @@ def pagina_tecnico():
             if cod not in info.index:
                 continue
             linha = info.loc[cod]
-            if linha["nivel_final"] not in filtro:
-                continue
+            # Fora do filtro o município fica cinza, para o contorno do estado não sumir
+            visivel = linha["nivel_final"] in filtro
+            sem_chuva = linha["dias_sem_chuva_mediana"]
             f["properties"].update({
                 "nome": linha["nm_municipio"],
-                "nivel": linha["nivel_final"],
+                "nivel": linha["nivel_final"].capitalize(),
                 "focos": int(linha["qtd_focos"]),
-                "cor": rgb(CORES[linha["nivel_final"]]),
+                "chuva": "sem dado" if pd.isna(sem_chuva) else f"{sem_chuva:.0f} dias",
+                "canal": str(linha["canal_envio"]),
+                "cor": rgb(CORES[linha["nivel_final"]], 235) if visivel else [222, 214, 200, 140],
             })
             feicoes.append(f)
         geo["features"] = feicoes
         camada = pdk.Layer(
-            "GeoJsonLayer", geo, pickable=True, stroked=True, filled=True,
-            get_fill_color="properties.cor", get_line_color=[251, 249, 245, 200], line_width_min_pixels=0.6,
+            "GeoJsonLayer", geo, pickable=True, stroked=True, filled=True, auto_highlight=True,
+            highlight_color=[30, 42, 74, 90],
+            get_fill_color="properties.cor", get_line_color=[251, 249, 245, 230], line_width_min_pixels=0.7,
         )
         col_mapa, col_tabela = st.columns([4, 5])
         with col_mapa:
             st.pydeck_chart(pdk.Deck(
                 layers=[camada],
-                initial_view_state=pdk.ViewState(latitude=-4.0, longitude=-52.6, zoom=4.75),
-                tooltip={"html": "<b>{nome}</b><br/>Nível: {nivel}<br/>Focos na semana: {focos}"},
-                map_style=None,
-            ), use_container_width=True, height=520)
+                # Enquadra o Pará inteiro na coluna do mapa
+                initial_view_state=pdk.ViewState(latitude=-3.7, longitude=-52.6, zoom=4.35, min_zoom=3.5, max_zoom=9),
+                tooltip={"html": "<b>{nome}</b><br/>Nível: {nivel}<br/>Focos na semana: {focos}"
+                                 "<br/>Sem chuva: {chuva}<br/>Canal: {canal}",
+                         "style": {"backgroundColor": "#1E2A4A", "color": "#FBF9F5", "fontSize": "13px",
+                                   "borderRadius": "8px", "padding": "8px 10px"}},
+                # Fundo claro da Carto, sem rótulos e sem chave de API: mostra os estados vizinhos e o litoral
+                map_provider="carto",
+                map_style="https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json",
+            ), use_container_width=True, height=470)
             legenda = "".join(f"<div><span class='ac-pt' style='background:{CORES[n]}'></span>{n.capitalize()} "
                               f"<b>{int((atual['nivel_final'] == n).sum())}</b></div>" for n in NIVEIS)
             st.markdown(f"<div class='ac-legenda'>{legenda}</div>", unsafe_allow_html=True)
@@ -498,17 +512,19 @@ def pagina_tecnico():
                   .rename(columns={"nm_municipio": "Município", "nivel_final": "Nível", "qtd_focos": "Focos",
                                    "dias_sem_chuva_mediana": "Dias sem chuva", "canal_envio": "Canal",
                                    "pct_area_4g": "4G (% área)"}))
-        estilo = tabela.style.map(lambda n: f"color:{CORES[n]};font-weight:700", subset=["Nível"]).format(
-            {"Dias sem chuva": "{:.0f}", "4G (% área)": "{:.0f}"}, na_rep="–")
+        # O Streamlit ignora o na_rep do Styler e mostra "None"; o dado faltante vira "–" antes
+        for col in ["Dias sem chuva", "4G (% área)"]:
+            tabela[col] = tabela[col].map(lambda v: "–" if pd.isna(v) else f"{v:.0f}")
+        estilo = tabela.style.map(lambda n: f"color:{CORES[n]};font-weight:700", subset=["Nível"])
         with col_tabela:
             st.dataframe(estilo, hide_index=True, use_container_width=True, height=560,
-                         column_config={"Município": st.column_config.TextColumn(width="medium"),
-                                        "Nível": st.column_config.TextColumn(width="small"),
-                                        "Focos": st.column_config.Column(width="small"),
-                                        "Dias sem chuva": st.column_config.Column("Sem chuva", width="small", help="Dias sem chuva (mediana dos focos)"),
-                                        "Canal": st.column_config.TextColumn(width="small"),
-                                        "4G (% área)": st.column_config.Column(
-                                            "4G %", width="small", help="% da área do município com sinal 4G")})
+                         column_config={"Município": st.column_config.TextColumn(width=150, pinned=False),
+                                        "Nível": st.column_config.TextColumn(width=72),
+                                        "Focos": st.column_config.Column(width=56),
+                                        "Dias sem chuva": st.column_config.TextColumn("Sem chuva", width=78, alignment="right", help="Dias sem chuva (mediana dos focos)"),
+                                        "Canal": st.column_config.TextColumn(width=62),
+                                        "4G (% área)": st.column_config.TextColumn(
+                                            "4G %", width=52, alignment="right", help="% da área do município com sinal 4G")})
 
     with aba_fila:
         st.caption("Vermelho só sai depois da revisão. Para baixar o nível, o motivo é obrigatório. "
