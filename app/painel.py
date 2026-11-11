@@ -65,7 +65,7 @@ ESTILO = """
 #MainMenu, [data-testid="stMainMenu"], [data-testid="stAppDeployButton"], [data-testid="stToolbarActions"], [data-testid="stDecoration"] {display: none;}
 /* Tira o ícone de link que o Streamlit põe ao lado de cada título */
 [data-testid="stHeaderActionElements"] {display: none;}
-.block-container {padding-top: 3.4rem; padding-bottom: 2rem; max-width: 1400px;}
+.block-container {padding-top: 2.2rem; padding-bottom: 2rem; max-width: 1400px;}
 .ac-topo {display: flex; align-items: center; gap: 14px; margin-bottom: .2rem;}
 .ac-topo svg {width: 52px; height: 52px; flex: none;}
 .ac-topo .ac-h1 {font-size: 1.9rem; line-height: 1.1; margin: 0; padding: 0; font-weight: 700; color: #1E2A4A;}
@@ -89,24 +89,38 @@ ESTILO = """
 section[data-testid="stSidebar"] .ac-marca {display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.25rem;}
 section[data-testid="stSidebar"] .ac-marca svg {width: 34px; height: 34px;}
 
-/* Início: capa com a arte do pitch */
-.ac-capa {position: relative; border-radius: 16px; overflow: hidden; margin: .2rem 0 0; padding: 40px 40px 0;
-          background: linear-gradient(180deg, #1C1411 0%, #3A1D13 45%, #9C4119 75%, #D9772E 100%);}
-.ac-capa-arte {display: block; width: calc(100% + 80px) !important; max-width: none !important; margin: 8px -40px 0; height: auto;}
-.ac-capa .ac-hero {margin: 0;}
-.ac-capa .ac-hero svg {width: 76px; height: 76px; background: #FBF9F5; border-radius: 50%; padding: 8px; box-sizing: border-box;}
-.ac-capa .ac-hero h1 {color: #FFFFFF;}
-.ac-capa .ac-hero p {color: #F3DCC6; max-width: 46ch;}
-.ac-capa-cartoes {display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
-                  margin: -26px 20px 0; position: relative;}
-.ac-capa-cartoes .ac-cartao {background: rgba(251, 249, 245, .82); border: 1px solid rgba(255, 255, 255, .55);
-                  -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2);
-                  box-shadow: 0 10px 30px -12px rgba(28, 20, 17, .45);}
+/* Início: capa com a arte do pitch, tudo numa tela no desktop */
+.ac-capa {position: relative; border-radius: 16px; overflow: hidden; padding: 30px 34px 10.5%; margin-bottom: 1.4rem;
+          background-color: #1C1411; background-repeat: no-repeat, no-repeat;
+          background-size: 100% auto, 100% 100%; background-position: center bottom, center;}
+.ac-capa-topo {display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px 32px;}
+.ac-capa .ac-hero {margin: 0; gap: 18px;}
+.ac-capa .ac-hero svg {width: 64px; height: 64px; background: #FBF9F5; border-radius: 50%; padding: 7px; box-sizing: border-box;}
+.ac-capa .ac-hero h1 {color: #FFFFFF; font-size: 2.4rem;}
+.ac-capa .ac-hero p {color: #F3DCC6; max-width: 36ch; font-size: 1.05rem;}
+.ac-capa-numeros {display: flex; gap: 0;}
+.ac-capa-numeros > div {padding: 0 18px;}
+.ac-capa-numeros > div + div {border-left: 1px solid rgba(255, 255, 255, .18);}
+.ac-capa-numeros b {display: block; white-space: nowrap; font-size: 1.6rem; font-weight: 800; color: #FFFFFF; line-height: 1.1; font-variant-numeric: tabular-nums;}
+.ac-capa-numeros span {display: block; max-width: 17ch; font-size: .78rem; color: #E9CDB3; line-height: 1.3; margin-top: 3px;}
+.ac-capa-cartoes {display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 26px;}
+.ac-capa-cartoes .ac-cartao {background: rgba(28, 20, 17, .38); border: 1px solid rgba(255, 255, 255, .16);
+                  -webkit-backdrop-filter: blur(12px) saturate(1.15); backdrop-filter: blur(12px) saturate(1.15);
+                  box-shadow: 0 10px 30px -14px rgba(0, 0, 0, .55);}
+.ac-capa-cartoes .ac-cartao h4 {color: #FFFFFF;}
+.ac-capa-cartoes .ac-cartao p {color: #EADCCD;}
 .ac-cartao, [data-testid="stMetric"] {transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s cubic-bezier(.2, .8, .2, 1);}
 .ac-cartao:hover, [data-testid="stMetric"]:hover {transform: translateY(-4px); box-shadow: 0 14px 28px -14px rgba(28, 20, 17, .35);}
 @media (prefers-reduced-motion: reduce) {.ac-cartao, [data-testid="stMetric"] {transition: none;} .ac-cartao:hover, [data-testid="stMetric"]:hover {transform: none;}}
-@media (max-width: 640px) {.ac-capa {padding: 28px 20px 0;} .ac-capa-arte {width: calc(100% + 40px) !important; margin: 8px -20px 0;} .ac-capa .ac-hero {flex-direction: column; align-items: flex-start; gap: 14px;}
-                           .ac-capa .ac-hero h1 {font-size: 2.2rem;} .ac-capa-cartoes {margin: -12px 10px 0;}}
+.ac-passos {display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 6px 28px; margin: 4px 0 2px;}
+.ac-passos b {color: #1E2A4A;}
+.ac-passos p {margin: 2px 0 0; color: #5B6478; font-size: .9rem; line-height: 1.4;}
+@media (max-width: 1400px) {.ac-capa .ac-hero p {max-width: 30ch; font-size: 1rem;} .ac-capa-numeros > div {padding: 0 14px;} .ac-capa-numeros b {font-size: 1.4rem;}}
+@media (max-width: 900px) {.ac-capa-numeros > div {padding: 0 14px 0 0;} .ac-capa-numeros > div + div {padding-left: 14px;}}
+@media (max-width: 640px) {.ac-capa {padding: 24px 18px 30%;} .ac-capa .ac-hero {flex-direction: column; align-items: flex-start; gap: 12px;}
+                           .ac-capa .ac-hero h1 {font-size: 2.1rem;}
+                           .ac-capa-numeros {display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%;}
+                           .ac-capa-numeros > div, .ac-capa-numeros > div + div {padding: 0; border: 0;} .ac-capa-numeros b {font-size: 1.25rem;}}
 
 /* Início */
 .ac-hero {display: flex; align-items: center; gap: 22px; margin: .4rem 0 1.2rem;}
@@ -204,6 +218,54 @@ if bol is None:
     st.error("Faltam os dados do painel. Rode `python app/preparar_dados.py` na raiz do repositório.")
     st.stop()
 
+
+# ---------------------------------------------------------------- abertura (só na primeira visita da sessão)
+# A faixa de terra abre, o broto nasce, a chama sobe e o nome aparece. Depois a tela some sozinha.
+# Não bloqueia cliques e não aparece para quem pediu menos movimento no sistema.
+ABERTURA = """
+<style>
+.ac-abertura {position: fixed; inset: 0; z-index: 999999; display: flex; flex-direction: column; align-items: center;
+              justify-content: center; gap: 18px; pointer-events: none;
+              background: radial-gradient(120% 80% at 50% 100%, #9C4119 0%, #3A1D13 45%, #1C1411 100%);
+              animation: ac-sai .6s cubic-bezier(.4, 0, .2, 1) 2.3s forwards;}
+.ac-abertura svg {width: 132px; height: 132px; overflow: visible;}
+.ac-abertura .ac-a-terra {transform-box: fill-box; transform-origin: center; transform: scaleX(0);
+                          animation: ac-abre .55s cubic-bezier(.16, 1, .3, 1) .15s forwards;}
+.ac-abertura .ac-a-caule {stroke-dasharray: 44; stroke-dashoffset: 44; animation: ac-traco .45s cubic-bezier(.16, 1, .3, 1) .5s forwards;}
+.ac-abertura .ac-a-folha {transform-box: fill-box; transform: scale(0); animation: ac-cresce .5s cubic-bezier(.34, 1.4, .64, 1) .75s forwards;}
+.ac-abertura .ac-a-folha.e {transform-origin: 100% 100%;}
+.ac-abertura .ac-a-folha.d {transform-origin: 0% 100%;}
+.ac-abertura .ac-a-chama {transform-box: fill-box; transform-origin: 50% 100%; opacity: 0; transform: translateY(18px) scale(.6);
+                          animation: ac-chama .6s cubic-bezier(.16, 1, .3, 1) 1s forwards, ac-tremula 1.6s ease-in-out 1.6s infinite;}
+.ac-abertura .ac-a-nome {font-size: 2.6rem; font-weight: 800; color: #FFFFFF; letter-spacing: -.02em; line-height: 1;
+                         opacity: 0; transform: translateY(10px); animation: ac-sobe .5s cubic-bezier(.16, 1, .3, 1) 1.35s forwards;}
+.ac-abertura .ac-a-frase {font-size: 1rem; color: #F3DCC6; opacity: 0; transform: translateY(8px);
+                          animation: ac-sobe .5s cubic-bezier(.16, 1, .3, 1) 1.55s forwards;}
+@keyframes ac-abre {to {transform: scaleX(1);}}
+@keyframes ac-traco {to {stroke-dashoffset: 0;}}
+@keyframes ac-cresce {to {transform: scale(1);}}
+@keyframes ac-chama {to {opacity: 1; transform: translateY(0) scale(1);}}
+@keyframes ac-tremula {0%, 100% {transform: scale(1);} 50% {transform: scale(1.04, .97);}}
+@keyframes ac-sobe {to {opacity: 1; transform: translateY(0);}}
+@keyframes ac-sai {to {opacity: 0; visibility: hidden;}}
+@media (prefers-reduced-motion: reduce) {.ac-abertura {display: none;}}
+</style>
+<div class="ac-abertura" aria-hidden="true">
+  <svg viewBox="0 0 200 200">
+    <rect class="ac-a-terra" x="26" y="112" width="148" height="14" rx="7" fill="#B98A4B"/>
+    <path class="ac-a-caule" d="M100 192 V150" stroke="#2F8F4E" stroke-width="9" stroke-linecap="round" fill="none"/>
+    <g transform="translate(128 152) scale(.82)"><path class="ac-a-folha d" d="M-26 24 C-30 -6 -6 -28 28 -26 C30 8 6 30 -26 24 Z" fill="#2F8F4E"/></g>
+    <g transform="translate(72 152) scale(-.82 .82)"><path class="ac-a-folha d" d="M-26 24 C-30 -6 -6 -28 28 -26 C30 8 6 30 -26 24 Z" fill="#2F8F4E"/></g>
+    <g transform="translate(100 56) scale(1.35)"><path class="ac-a-chama" d="M0 -34 C6 -20 22 -12 22 8 C22 22 12 32 0 32 C-12 32 -22 22 -22 8 C-22 -2 -15 -8 -11 -16 C-9 -9 -6 -6 -3 -6 C-2 -15 -4 -25 0 -34 Z" fill="#E8590C"/></g>
+  </svg>
+  <div class="ac-a-nome">Aceiro</div>
+  <div class="ac-a-frase">Boletim de fogo e seca para a agricultura familiar</div>
+</div>
+"""
+if not st.session_state.get("abertura_vista"):
+    st.session_state.abertura_vista = True
+    st.markdown(ABERTURA, unsafe_allow_html=True)
+
 if "decisoes" not in st.session_state:
     st.session_state.decisoes = []
 
@@ -267,47 +329,48 @@ def pagina_inicio():
     total_focos = int(bol["qtd_focos"].sum())
     familiar = int(bol.drop_duplicates("cod_municipio")["qtd_estab_agro_familiar"].sum())
     fmt = lambda n: f"{n:,}".replace(",", ".")  # noqa: E731
-    st.markdown(
-        f"<div class='ac-capa'><div class='ac-hero'>{SIMBOLO}<div><h1>Aceiro</h1>"
-        "<p>Boletim semanal de fogo e seca, em linguagem simples, para a agricultura familiar do Pará.</p></div></div>"
-        f"<img class='ac-capa-arte' alt='' src='data:image/png;base64,{ARTE}'></div>",
-        unsafe_allow_html=True)
-
     st.markdown(f"""
-<div class='ac-capa-cartoes'>
-  <div class='ac-cartao'><h4>O dado existe, a decisão não chega</h4>
-    <p>Focos de fogo, seca e El Niño são públicos, mas chegam em mapas e índices técnicos.
-    Quem vive da roça precisa saber o que fazer nesta semana.</p></div>
-  <div class='ac-cartao'><h4>Um boletim por município, toda semana</h4>
-    <p>Nível de alerta, o motivo em uma frase e a ação da semana, como abrir o aceiro.
-    Chega por WhatsApp, SMS, rádio comunitário ou visita do técnico da Emater.</p></div>
-  <div class='ac-cartao'><h4>O técnico revisa antes de sair</h4>
-    <p>Alerta vermelho só sai depois da revisão do técnico. Para baixar o nível, ele precisa
-    registrar o motivo.</p></div>
-</div>
-<div class='ac-numeros'>
-  <div><div class='ac-numero'>{fmt(total_focos)}</div>
-    <p>focos de calor no Pará de ago. a out./2026 (INPE, satélite de referência)</p></div>
-  <div><div class='ac-numero'>144</div>
-    <p>municípios com boletim toda semana</p></div>
-  <div><div class='ac-numero'>{fmt(familiar)}</div>
-    <p>estabelecimentos da agricultura familiar no estado (IBGE, Censo Agro 2017)</p></div>
+<div class='ac-capa' style="background-image: url('data:image/png;base64,{ARTE}'),
+     linear-gradient(180deg, #1C1411 0%, #3A1D13 40%, #9C4119 72%, #D9772E 100%);">
+  <div class='ac-capa-topo'>
+    <div class='ac-hero'>{SIMBOLO}<div><h1>Aceiro</h1>
+      <p>Boletim semanal de fogo e seca, em linguagem simples, para a agricultura familiar do Pará.</p></div></div>
+    <div class='ac-capa-numeros'>
+      <div><b>{fmt(total_focos)}</b><span>focos de calor, ago. a out./2026</span></div>
+      <div><b>144</b><span>municípios com boletim</span></div>
+      <div><b>{fmt(familiar)}</b><span>estabelecimentos familiares</span></div>
+    </div>
+  </div>
+  <div class='ac-capa-cartoes'>
+    <div class='ac-cartao'><h4>O dado existe, a decisão não chega</h4>
+      <p>Focos de fogo, seca e El Niño são públicos, mas chegam em mapas e índices técnicos.
+      Quem vive da roça precisa saber o que fazer nesta semana.</p></div>
+    <div class='ac-cartao'><h4>Um boletim por município, toda semana</h4>
+      <p>Nível de alerta, o motivo em uma frase e a ação da semana, como abrir o aceiro.
+      Chega por WhatsApp, SMS, rádio comunitário ou visita do técnico da Emater.</p></div>
+    <div class='ac-cartao'><h4>O técnico revisa antes de sair</h4>
+      <p>Alerta vermelho só sai depois da revisão do técnico. Para baixar o nível, ele precisa
+      registrar o motivo.</p></div>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
     st.subheader("Como usar este protótipo", anchor=False)
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.markdown("**1. Veja o que o agricultor recebe**")
-        st.caption("Escolha um município e veja o boletim no WhatsApp, no SMS e no rádio.")
+        st.markdown("<div class='ac-passos'><div><b>1. Veja o que o agricultor recebe</b>"
+                    "<p>Escolha um município e veja o boletim no WhatsApp, no SMS e no rádio.</p></div></div>",
+                    unsafe_allow_html=True)
         st.page_link(PAGINAS["agricultor"], label="Abrir a visão do agricultor", icon=":material/smartphone:")
     with c2:
-        st.markdown("**2. Faça o papel do técnico**")
-        st.caption("Veja o mapa da semana e revise os alertas vermelhos na fila.")
+        st.markdown("<div class='ac-passos'><div><b>2. Faça o papel do técnico</b>"
+                    "<p>Veja o mapa da semana e revise os alertas vermelhos na fila.</p></div></div>",
+                    unsafe_allow_html=True)
         st.page_link(PAGINAS["tecnico"], label="Abrir o painel do técnico", icon=":material/map:")
     with c3:
-        st.markdown("**3. Entenda os dados**")
-        st.caption("Fontes, a regra usada para o nível e o que o Aceiro não promete.")
+        st.markdown("<div class='ac-passos'><div><b>3. Entenda os dados</b>"
+                    "<p>Fontes, a regra usada para o nível e o que o Aceiro não promete.</p></div></div>",
+                    unsafe_allow_html=True)
         st.page_link(PAGINAS["dados"], label="Abrir sobre os dados", icon=":material/info:")
 
     st.info("**O que é real e o que é demonstração.** Os focos, os municípios, a cobertura 4G e o El Niño são "
