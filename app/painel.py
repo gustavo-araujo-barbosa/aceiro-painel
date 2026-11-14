@@ -18,9 +18,11 @@ import base64
 import copy
 import json
 import sys
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
+import altair as alt
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
@@ -163,6 +165,12 @@ section[data-testid="stSidebar"] .ac-marca svg {width: 34px; height: 34px;}
 .ac-sms-rot {font-size: .75rem; color: #5B6478; text-align: center; margin: 2px 0 8px;}
 .ac-radio-rot {display: flex; align-items: center; gap: 6px; font-weight: 700; margin-bottom: 4px;}
 .ac-radio-rot svg {width: 18px; height: 18px;}
+/* Filtro de níveis: cada etiqueta com a cor do próprio nível */
+[data-testid="stMultiSelect"] span[data-tag][aria-label="verde"] {background-color: #3E9B63 !important; color: #FFFFFF !important;}
+[data-testid="stMultiSelect"] span[data-tag][aria-label="amarelo"] {background-color: #EBC944 !important; color: #1E2A4A !important;}
+[data-testid="stMultiSelect"] span[data-tag][aria-label="laranja"] {background-color: #E8772E !important; color: #FFFFFF !important;}
+[data-testid="stMultiSelect"] span[data-tag][aria-label="vermelho"] {background-color: #B23A2E !important; color: #FFFFFF !important;}
+[data-testid="stMultiSelect"] span[data-tag][aria-label="amarelo"] button {color: #1E2A4A !important;}
 </style>
 """
 
@@ -277,13 +285,38 @@ if "decisoes" not in st.session_state:
 semanas = sorted(bol["semana_ref"].unique())
 
 
+def sem_acento(texto):
+    return unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode().lower()
+
+
+def grafico_semanal(serie, cor, linha=False, altura=240):
+    """Focos por semana, sem zoom nem arrasto.
+
+    Os gráficos padrão do Streamlit aceitam zoom e arrasto. No celular, rolar a página por
+    cima do gráfico arrastava o eixo e as barras sumiam. Aqui o gráfico é fixo e começa no zero.
+    """
+    dados = serie.rename("Focos").reset_index()
+    dados.columns = ["Semana", "Focos"]
+    dados["Semana"] = dados["Semana"].str.replace("2026-", "", regex=False)
+    base = alt.Chart(dados)
+    marca = (base.mark_line(color=cor, point=alt.OverlayMarkDef(color=cor, size=40), strokeWidth=2.5) if linha
+             else base.mark_bar(color=cor, cornerRadiusTopLeft=3, cornerRadiusTopRight=3))
+    grafico = marca.encode(
+        x=alt.X("Semana:N", sort=None, title=None, axis=alt.Axis(labelAngle=0, labelOverlap="parity")),
+        y=alt.Y("Focos:Q", title=None, scale=alt.Scale(domainMin=0, nice=True),
+                axis=alt.Axis(format="d", tickMinStep=1)),
+        tooltip=[alt.Tooltip("Semana:N"), alt.Tooltip("Focos:Q", format="d")],
+    ).properties(height=altura)
+    st.altair_chart(grafico, width="stretch")
+
+
 def montar_semana(usa_semana):
     """Monta a barra lateral e os dados da semana escolhida.
 
     O seletor de semana só aparece nas páginas que mudam com ele (agricultor e técnico).
     A escolha fica guardada na sessão, para não se perder ao trocar de página.
     """
-    global semana, atual, anterior, aviso, inicio, nomes_por_focos
+    global semana, atual, anterior, aviso, inicio, nomes_por_focos, nomes_alfabeticos, padrao_municipio
     st.sidebar.markdown(f"<div class='ac-marca'>{SIMBOLO}<span>Aceiro</span></div>", unsafe_allow_html=True)
     st.sidebar.caption("Boletim de fogo e seca · protótipo")
     escolhida = st.session_state.get("semana_escolhida", semanas[-1])
@@ -319,6 +352,9 @@ def montar_semana(usa_semana):
     atual["sms_final"] = [texto_sms(n, q) for n, q in zip(atual["nivel_final"], atual["qtd_focos"])]
     atual["ajustado"] = atual["nivel_final"] != atual["nivel_alerta"]
     nomes_por_focos = atual.sort_values("qtd_focos", ascending=False)["nm_municipio"].tolist()
+    # Listas de escolha em ordem alfabética (ignorando acentos); começa no município com mais focos
+    nomes_alfabeticos = sorted(atual["nm_municipio"], key=sem_acento)
+    padrao_municipio = nomes_alfabeticos.index(nomes_por_focos[0])
 
 
 def rodape():
@@ -388,7 +424,7 @@ def pagina_agricultor():
         f"<div class='ac-topo'>{SIMBOLO}<div><div class='ac-h1'>Visão do agricultor</div>"
         f"<p>O boletim da semana {semana}, como chega no celular ou no rádio</p></div></div>",
         unsafe_allow_html=True)
-    escolhido = st.selectbox("Seu município", nomes_por_focos, key="mun_agricultor")
+    escolhido = st.selectbox("Seu município", nomes_alfabeticos, index=padrao_municipio, key="mun_agricultor")
     linha = atual[atual["nm_municipio"] == escolhido].iloc[0]
     canal = st.radio("Como o boletim chega", ["WhatsApp", "SMS", "Rádio"], horizontal=True,
                      index=0 if linha.canal_envio == "whatsapp" else 2)
@@ -427,7 +463,7 @@ def pagina_agricultor():
                     f"O 4G cobre {linha.pct_area_4g:.0f}% da área do município.")
         serie = bol[bol["nm_municipio"] == escolhido].set_index("semana_ref")["qtd_focos"].rename("Focos por semana")
         st.markdown("**Focos de calor no município, semana a semana**")
-        st.bar_chart(serie, color=CORES["laranja"], height=220)
+        grafico_semanal(serie, CORES["laranja"], altura=220)
         st.caption("Foco de calor é o que o satélite detecta. Não confirma incêndio nem dano à roça.")
     rodape()
 
@@ -459,8 +495,9 @@ def pagina_tecnico():
               help="Comparação com a semana anterior. Não aparece em semana incompleta.")
     c4.metric("Com foco", f"{atual['pct_mun_com_foco'].iloc[0]:.0f}%", help="Municípios com pelo menos um foco na semana")
 
+    # Rótulos fixos e chave própria: a aba aberta continua aberta depois de cada decisão
     aba_mapa, aba_fila, aba_boletim, aba_tendencia = st.tabs(
-        ["Mapa", f"Fila de revisão ({len(fila)})", "Boletim do município", "Tendência"])
+        ["Mapa", "Fila de revisão", "Boletim do município", "Tendência"], key="abas_tecnico")
 
     with aba_mapa:
         info = atual.set_index("cod_municipio")
@@ -529,6 +566,17 @@ def pagina_tecnico():
     with aba_fila:
         st.caption("Vermelho só sai depois da revisão. Para baixar o nível, o motivo é obrigatório. "
                    "**Simulação:** as decisões ficam só nesta sessão e nada é enviado.")
+        st.markdown(f"**{len(fila)} boletins vermelhos esperando revisão nesta semana.**")
+        perfil = st.radio(
+            "Ver a fila como (simulação de perfil)", ["Técnico da Emater", "Auditor", "Visitante"],
+            horizontal=True, key="perfil_fila",
+            help="No Aceiro, cada papel tem um acesso diferente (RBAC). Só o técnico extensionista revisa e muda o nível. "
+                 "O auditor vê as decisões, mas não decide. Aqui é só uma simulação: não há login.")
+        pode_decidir = perfil == "Técnico da Emater"
+        if perfil == "Auditor":
+            st.info("**Auditor:** vê a fila e o registro das decisões, com quem decidiu e o motivo, mas não aprova nem muda o nível.")
+        elif perfil == "Visitante":
+            st.info("**Visitante:** só vê a fila. Aprovar ou mudar o nível é tarefa do técnico da Emater.")
         if fila.empty:
             st.success("Nenhum boletim vermelho esperando revisão nesta semana.")
         for _, linha in fila.sort_values("qtd_focos", ascending=False).iterrows():
@@ -538,6 +586,9 @@ def pagina_tecnico():
                     st.markdown(texto_whatsapp(linha, aviso))
                     st.caption(f"Canal principal: {CANAL[linha.canal_envio]} · 4G em {linha.pct_area_4g:.0f}% da área")
                 with direita:
+                    if not pode_decidir:
+                        st.caption("Só o técnico da Emater pode aprovar ou mudar o nível.")
+                        continue
                     novo = st.selectbox("Nível final", NIVEIS, index=3, key=f"nivel_{semana}_{linha.cod_municipio}")
                     justificativa = st.text_input("Motivo (obrigatório para baixar)",
                                                   key=f"motivo_{semana}_{linha.cod_municipio}")
@@ -552,12 +603,12 @@ def pagina_tecnico():
                                 "registrado_em": datetime.now().strftime("%d/%m %H:%M"),
                             })
                             st.rerun()
-        if st.session_state.decisoes:
+        if st.session_state.decisoes and perfil != "Visitante":
             st.subheader("Decisões registradas nesta sessão", anchor=False)
             st.dataframe(pd.DataFrame(st.session_state.decisoes), hide_index=True, width="stretch")
 
     with aba_boletim:
-        escolhido = st.selectbox("Município", nomes_por_focos)
+        escolhido = st.selectbox("Município", nomes_alfabeticos, index=padrao_municipio)
         linha = atual[atual["nm_municipio"] == escolhido].iloc[0]
         col_a, col_b, col_c = st.columns(3)
         with col_a:
@@ -582,13 +633,13 @@ def pagina_tecnico():
         st.caption(f"Canal principal: {CANAL[linha.canal_envio]}. Fontes: IBGE (Censo 2022 e Agro 2017) e Anatel.")
 
     with aba_tendencia:
-        mun = st.selectbox("Comparar com o estado", nomes_por_focos, key="tendencia")
+        mun = st.selectbox("Comparar com o estado", nomes_alfabeticos, index=padrao_municipio, key="tendencia")
         serie_mun = bol[bol["nm_municipio"] == mun].set_index("semana_ref")["qtd_focos"].rename(mun)
         serie_pa = bol.groupby("semana_ref")["qtd_focos"].sum().rename("Pará (total)")
         st.markdown(f"**Focos por semana: {mun}**")
-        st.bar_chart(serie_mun, color=CORES["laranja"])
+        grafico_semanal(serie_mun, CORES["laranja"])
         st.markdown("**Focos por semana: Pará**")
-        st.line_chart(serie_pa, color="#1E2A4A")
+        grafico_semanal(serie_pa, "#1E2A4A", linha=True)
         st.caption("As semanas 2026-W31 e 2026-W44 estão incompletas.")
     rodape()
 
